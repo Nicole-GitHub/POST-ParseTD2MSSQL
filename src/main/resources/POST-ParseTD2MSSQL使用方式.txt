@@ -1,0 +1,10 @@
+使用方式:
+	1.將此目錄內的檔案皆放在同一目錄下
+	2.修改bat裡的第二行的cd路徑為放置上述的檔案的目錄
+
+執行方式:
+	點兩下bat檔即會跳出CMD畫面
+	畫面中會請您輸入您本機放置SVN(dw2209)目錄的路徑(例:C:/22/DW/dw2209/)
+	執行完後會將產出以下兩種檔案:
+		1.移轉Teradata時所需的SQL Script(放在ParseTD2MSSQLSchema目錄下)
+		2.與SVN上的Table Layout比對後的結果(放在ParseTD2TableLayout目錄下)

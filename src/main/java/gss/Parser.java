@@ -397,18 +397,31 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 	 * @param fieldName
 	 * @return
 	 */
-	private static String getCellValue(Row row, int cellnum, String fieldName)throws Exception {
+	private static String getCellValue(Row row, int cellnum, String fieldName) throws Exception {
 		try {
-			if (!Tools.isntBlank(row.getCell(cellnum)) || row.getCell(cellnum).getCellType() == Cell.CELL_TYPE_BLANK) {
+			Cell cell = row.getCell(cellnum);
+			if (!cellNotBlank(cell))
 				return "";
-			} else if (row.getCell(cellnum).getCellType() == Cell.CELL_TYPE_NUMERIC) {
-				return String.valueOf((int) row.getCell(cellnum).getNumericCellValue()).trim();
-			} else if (row.getCell(cellnum).getCellType() == Cell.CELL_TYPE_STRING) {
-				return row.getCell(cellnum).getStringCellValue().trim();
+			else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC)
+				return String.valueOf((int) cell.getNumericCellValue()).trim();
+			else if (cell.getCellType() == Cell.CELL_TYPE_STRING)
+				return cell.getStringCellValue().trim();
+			else if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
+				if (cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)
+					return String.valueOf((int) cell.getNumericCellValue()).trim();
+				else if (cell.getCellType() == Cell.CELL_TYPE_STRING)
+					return cell.getStringCellValue().trim();
 			}
 		} catch (Exception ex) {
 			throw new Exception(className + " getCellValue " + fieldName + " 格式錯誤");
 		}
 		return "";
+	}
+	
+	/**
+     * 不為空
+     */
+	private static boolean cellNotBlank(Cell cell) {
+		return cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK;
 	}
 }
