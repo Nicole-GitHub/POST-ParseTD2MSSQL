@@ -150,4 +150,30 @@ public class FileTools {
 		return bool;
 	}
 
+	/**
+	 * 刪除路徑下的所有資料夾與資料
+	 * @param path
+	 */
+	public static void deleteFolder(String path) {
+		File f = new File(path);
+		
+		if (!f.exists())
+			f.mkdirs();
+		
+		FileTools.deleteFolder(f);
+	}
+	/**
+	 * 刪除路徑下的所有資料夾與資料
+	 * @param file
+	 */
+	private static void deleteFolder(File file) {
+		for (File subFile : file.listFiles()) {
+			if (subFile.isDirectory()) {
+				deleteFolder(subFile);
+			} else {
+				subFile.delete();
+			}
+		}
+		file.delete();
+	}
 }

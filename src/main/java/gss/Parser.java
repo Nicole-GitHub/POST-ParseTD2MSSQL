@@ -31,12 +31,12 @@ public class Parser {
 		System.out.println("=== isStartupFromJar: " + isStartupFromJar);
 		
 		// 程式執行完後欲產出的檔案Excel & SQL Path
-		String targetTableLayoutExcelPath = System.getProperty("user.dir") + File.separator; // Jar
-		String targetSQLPath = System.getProperty("user.dir") + File.separator; // Jar
+//		String targetTableLayoutExcelPath = System.getProperty("user.dir") + File.separator; // Jar
+		String path = System.getProperty("user.dir") + File.separator; // Jar
 		if(!isStartupFromJar) {// IDE
-			targetSQLPath = os.contains("Mac") ? "/Users/nicole/Dropbox/POST/ParseTD2MSSQL/" // Mac
-							: "C:/Users/nicole_tsou/Dropbox/POST/ParseTD2MSSQL/"; // win
-			targetTableLayoutExcelPath = "C:/Users/nicole_tsou/Dropbox/POST/ParseTD2MSSQL/";
+			path = os.contains("Mac") ? "/Users/nicole/Dropbox/POST/JavaTools/POST-ParseTD2MSSQL/" // Mac
+							: "C:/Users/nicole_tsou/Dropbox/POST/JavaTools/POST-ParseTD2MSSQL/"; // win
+//			targetTableLayoutExcelPath = "C:/Users/nicole_tsou/Dropbox/POST/JavaTools/POST-ParseTD2MSSQL/";
 			svnPath = "C:/22/DW/dw2209/";
 		}
 		
@@ -61,8 +61,9 @@ public class Parser {
 		// 要與上述SQL比對的Table Spec
 		String sourceTableLayoutExcelPath = svnPath + "DOCUMENT/3-SD/DW/Table Spec/";
 
-		targetSQLPath += "ParseTD2MSSQLSchema/";
-		targetTableLayoutExcelPath += "ParseTD2TableLayout/";
+		String output = path + "Output/";
+		String targetSQLPath = output + "ParseTD2MSSQLSchema/";
+		String targetTableLayoutExcelPath = output + "ParseTD2TableLayout/";
 				
 		Map<String,String> mapPath = new HashMap<String,String>();
 		mapPath.put("sourceSQLListExcelPath", sourceSQLListExcelPath);
@@ -72,7 +73,9 @@ public class Parser {
 		mapPath.put("targetSQLPath", targetSQLPath);
 		
 
+		FileTools.deleteFolder(path + "Output/");
 		List<Map<String, String>> sourceTableList = runParserSourceSQLListExcel(Tools.getSheet(sourceSQLListExcelPath, "檔案清單(盤點)"));
+		
 		runParserSourceSQL(mapPath, sourceTableList);
 	}
 	
@@ -124,9 +127,10 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 	 * @throws Exception
 	 */
 	private static void runParserSourceSQL(Map<String,String> mapPath, List<Map<String, String>> sourceTableList) throws Exception {
-		String sourceDBName = "BDBU_POST_HIS";
-		String DATA_SOURCE = "SQLServerInstance2BDBU_POST_HIS";
-
+		String msDBName = "DDWQDHIS";
+		String DATA_SOURCE = "SQLServerInstance";
+		String createExternalTable = "",createMSSQLTable = "", insertInto = "";
+		
 		List<Map<String, String>> mapList = new ArrayList<Map<String, String>>();
 		Map<String, String> map = new HashMap<String, String>();
 		
@@ -136,8 +140,10 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				String sourceSQLPath = mapPath.get("sourceSQLPath")+ mapTableInfo.get("TableName") + ".sql";
 //				System.out.println("sqlFileName:" + sourceSQLPath );
 				String oriSQL = FileTools.readFileContent(sourceSQLPath);
-				String tableName = oriSQL.substring(oriSQL.toUpperCase().indexOf("TABLE") + 5,oriSQL.indexOf(",")).trim();
-				String dwTableName = "dbo."+tableName.replace(".","_");
+				String tdDBTableNameDot = oriSQL.substring(oriSQL.toUpperCase().indexOf("TABLE") + 5,oriSQL.indexOf(",")).trim();
+				String tdDBTableNameUL = tdDBTableNameDot.replace(".", "_");
+				String dwDBTableName = msDBName + ".dbo." + tdDBTableNameUL;
+				String polybaseTableName = "dbo.TD_" + tdDBTableNameUL;
 //				if("DP_PMM.THPMSCR1".equals(tableName))
 //					System.out.println("Stop!");
 				
@@ -151,53 +157,111 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				String pk = oriSQL.substring(oriSQL.indexOf("PRIMARY INDEX"));
 				pk = pk.substring(pk.indexOf("(") + 1,pk.indexOf(")")).replace("\r\n", "").trim();
 				
-				// 2.寫出移轉資料所需的Script
-				String rs = "--外部關聯表\r\n"
-						+ "CREATE EXTERNAL TABLE " + tableName + "\r\n" + schema + "\r\n" 
-						+ "WITH (DATA_SOURCE = " + DATA_SOURCE + ", LOCATION = '" + sourceDBName + "." + tableName
-						+ "');\r\n\r\n"
-						+ "--MSSQL\r\n"
-						+ "CREATE TABLE " + dwTableName + "\r\n" + schema.substring(0,schema.length()-1) + ",\r\n"
-						+ "PRIMARY KEY (" + pk + ")\r\n" 
-						+ ");\r\n\r\n"
-						+ "insert into " + dwTableName + " select * from " + tableName + ";";					
-				
-				FileTools.createFile(mapPath.get("targetSQLPath"), dwTableName, "sql", rs);
+//				// 2.外部關聯表EXTERNAL TABLE
+//				createExternalTable += "insert into BDBU_POST_HIS.dbo.CreateExternalTable \r\n"
+//						+ "values('CREATE EXTERNAL TABLE " + tableName + "\r\n(" ;
+//				// 2.CREATE MSSQL TABLE
+//				createMSSQLTable += "insert into BDBU_POST_HIS.dbo.CreateMSSQLTable \r\n"
+//						+ "values('CREATE TABLE " + dwTableName + "\r\n(" ;
 
+				// 2.外部關聯表EXTERNAL TABLE
+				createExternalTable += "CREATE EXTERNAL TABLE " + polybaseTableName + "\r\n(" ;
+				// 2.CREATE MSSQL TABLE
+				createMSSQLTable += "CREATE TABLE " + dwDBTableName + "\r\n(" ;
+				// 2.insert into
+				insertInto += "insert into " + msDBName + ".dbo.InsertInto \r\n"
+						+ "values('insert into " + dwDBTableName + " select * from " + polybaseTableName + ";');\r\n";
+				
 				// 1.將上述的schema解悉為較細項的Table Layout
 				mapList = new ArrayList<Map<String, String>>();
 				String[] colSchemaList = schema.split("\r\n");
 				String[] pkList = pk.split(",");
-				for(String colSchema : colSchemaList) {
+				for(String forColSchema : colSchemaList) {
 
 					map = new HashMap<String, String>();
-					String[] schemaList = colSchema.split(" ");
-					if(schemaList.length < 3) continue;
+					String[] schemaList = forColSchema.split(" ");
+					if (schemaList.length < 3)
+						continue;
+					
 					String colName = schemaList[1].trim();
 					String colTypeLen = schemaList[2].trim();
-					String colType = colTypeLen.contains("(") ? colTypeLen.substring(0,colTypeLen.indexOf("(")).trim() : colTypeLen.replace(",", "");
+					String colType = colTypeLen.contains("(") 
+							? colTypeLen.substring(0, colTypeLen.indexOf("(")).trim()
+							: colTypeLen.replace(",", "");
 					String colLen = colTypeLen.contains("(") 
-							? colTypeLen.substring(colTypeLen.indexOf("(")+1,colTypeLen.indexOf(")")).trim().replace(" ", "") : "";
-					String colNull = colSchema.contains("NOT NULL") ? "" : "Y";
-					String colPK = "N";
-					for(String str : pkList) {
-						if("Y".equals(colPK)) break;
-						colPK = str.trim().equals(colName) ? "Y" : "";
+							? colTypeLen.substring(colTypeLen.indexOf("(") + 1, colTypeLen.indexOf(")")).trim().replace(" ", "")
+							: "";
+					String colNull = forColSchema.contains("NOT NULL") ? "" : "Y";
+					
+					// PK
+					String colPK = "";
+					for (String str : pkList) {
+						if(str.trim().equals(colName)) {
+							colPK = "Y" ;
+							break;
+						}
 					}
 					
+					// 將Teradata的欄位型態改為MSSQL的欄位型態
+					if ("BYTEINT".equals(colType))
+						colType = "SmallInt";
+					else if ("FLOAT".equals(colType))
+						colType = "Decimal";
+					else if ("BYTE".equals(colType))
+						colType = "Binary";
+					else if ("VARBYTE".equals(colType))
+						colType = "Varbinary";
+					else if ("BLOB".equals(colType))
+						colType = "varbinary";
+					else if ("CHAR".equals(colType))
+						colType = "Nchar";
+					else if ("CLOB".equals(colType))
+						colType = "nvarchar";
+					else if ("VARCHAR".equals(colType))
+						colType = "nvarchar";
+					else if ("Graphic".equals(colType))
+						colType = "Nchar";
+					else if ("JSON".equals(colType))
+						colType = "nvarchar";
+					else if ("VARGRAPHIC".equals(colType))
+						colType = "nvarchar";
+					else if ("timestamp".equals(colType))
+						colType = "Datetime2";
+
+					// 供後續Excel使用
 					map.put("ColName", colName);
 					map.put("ColType", colType);
 					map.put("ColLen", colLen);
 					map.put("ColNull", colNull);
 					map.put("ColPK", colPK);
 					mapList.add(map);
+
+					// 組sql用
+					colLen = StringUtils.isBlank(colLen) ? "" : "(" + colLen + ")";
+					colNull = "Y".equals(colNull) ? "" : "NOT NULL";
+					String colSchema = "\n\t" + colName + " " + colType + colLen + " " + colNull + " ,";
+					createExternalTable += colSchema;
+					createMSSQLTable += colSchema;
 				}
+				
+				createExternalTable = createExternalTable.substring(0,createExternalTable.length()-1) + "\r\n)\r\n"
+						+ "WITH (DATA_SOURCE = " + DATA_SOURCE + ", LOCATION = '" + tdDBTableNameDot
+						+ "');\r\n\r\n"	;
+				createMSSQLTable = createMSSQLTable.substring(0,createMSSQLTable.length()) 
+						+ "\n\tPRIMARY KEY (" + pk + ")\r\n" 
+						+ ");\r\n\r\n" ;
 				
 				/**
 				 * 與整理過的Table Layout文件比對是否一致
 				 */
-				runChkTableLayout(mapPath, tableName, mapTableInfo.get("SubSys"), mapList);
+				runChkTableLayout(mapPath, tdDBTableNameDot, mapTableInfo.get("SubSys"), mapList);
 			}
+
+			// 寫出資料移轉所需Script
+			FileTools.createFile(mapPath.get("targetSQLPath"), "CreateExternalTable", "sql", createExternalTable);
+			FileTools.createFile(mapPath.get("targetSQLPath"), "CreateMSSQLTable", "sql", createMSSQLTable);
+			FileTools.createFile(mapPath.get("targetSQLPath"), "InsertInto", "sql", insertInto);
+			
 		} catch (Exception ex) {
 			throw new Exception(className + " Error: \n" + ex);
 		}
@@ -207,6 +271,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 
 	/**
 	 * 比對Schema與SVN上Table Spec裡的Schema是否一致
+	 * 並將Teradata SQL 內的Schema另寫成新的Excel檔，並標註比對結果(紅底表示不一致)
 	 * @param mapPath
 	 * @param tableName
 	 * @param subSys
@@ -221,7 +286,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 
 		String sourceTableLayoutExcelPath = mapPath.get("sourceTableLayoutExcelPath");
 		String targetTableLayoutExcelPath = mapPath.get("targetTableLayoutExcelPath");
-		boolean isError = false;
+//		boolean isError = false;
 		
 		try {
 			// 找出此檔案放置的確切位置
@@ -260,7 +325,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 			 * 開始比對Table Layout內容，並將Teradata SQL 內的Schema另寫成新的Excel檔，並標註比對結果(紅底表示不一致)
 			 */
 			// 因output時需workbook所以多此行只為取workbook
-			Workbook targetTableWorkbook = Tools.getWorkbook(targetTableLayoutExcelPath+"../Sample - Table Layout.xlsx");
+			Workbook targetTableWorkbook = Tools.getWorkbook(targetTableLayoutExcelPath+"../../Sample - Table Layout.xlsx");
 			Sheet targetSheet = targetTableWorkbook.getSheet("Layout");
 			CellStyle cellStyleNormal = Tools.setStyleNormal(targetTableWorkbook);
 			CellStyle cellStyleError = Tools.setStyleError(targetTableWorkbook);
@@ -299,10 +364,10 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 							CellStyle sqlColNullCellStyle = excelColNull.equals(sqlColNull) ? cellStyleNormal : cellStyleError;
 							CellStyle sqlColPKCellStyle = excelColPK.equals(sqlColPK) ? cellStyleNormal	: cellStyleError;
 							
-							isError = (sqlColTypeCellStyle.equals(cellStyleError)
-									|| sqlColLenCellStyle.equals(cellStyleError)
-									|| sqlColNullCellStyle.equals(cellStyleError)
-									|| sqlColPKCellStyle.equals(cellStyleError)) ? true : false;
+//							isError = (sqlColTypeCellStyle.equals(cellStyleError)
+//									|| sqlColLenCellStyle.equals(cellStyleError)
+//									|| sqlColNullCellStyle.equals(cellStyleError)
+//									|| sqlColPKCellStyle.equals(cellStyleError)) ? true : false;
 							
 							cell = row.createCell(0);
 							cell.setCellFormula("ROW()-4");
@@ -326,7 +391,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 						Tools.setCell(cellStyleError, row, 4, "");
 						Tools.setCell(cellStyleError, row, 5, "");
 						Tools.setCell(cellStyleError, row, 6, "");
-						isError = true;
+//						isError = true;
 					}
 					lastRowNum = i;
 				}
@@ -361,14 +426,14 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 					Tools.setCell(cellStyleError, row, 4, mapLayout.get("ColLen").toUpperCase());
 					Tools.setCell(cellStyleError, row, 5, mapLayout.get("ColNull").toUpperCase());
 					Tools.setCell(cellStyleError, row, 6, mapLayout.get("ColNull").toUpperCase());
-					isError = true;
+//					isError = true;
 				}
 			}
 			
 			// 將整理好的比對結果另寫出Excel檔
 			Tools.output(targetTableWorkbook, "2007", targetTableLayoutExcelPath, "Target - " + subSys + " " + fileName);
 
-			System.out.println("runChkTableLayout " + fileName + " 檔案比對結果: " + (isError ? "不一致" : "ok"));
+//			System.out.println("runChkTableLayout " + fileName + " 檔案比對結果: " + (isError ? "不一致" : "ok"));
 		} catch (Exception ex) {
 			throw new Exception(className + "runChkTableLayout Error: \n" + ex);
 		}
