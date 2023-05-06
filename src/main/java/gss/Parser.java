@@ -248,7 +248,8 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 						+ "WITH (DATA_SOURCE = " + DATA_SOURCE + ", LOCATION = '" + tdDBTableNameDot
 						+ "');\r\n\r\n"	;
 				createMSSQLTable = createMSSQLTable.substring(0,createMSSQLTable.length()) 
-						+ "\n\tPRIMARY KEY (" + pk + ")\r\n" 
+//						+ "\n\tPRIMARY KEY (" + pk + ")\r\n" 
+						+ "\n\tCONSTRAINT u_"+tdDBTableNameUL+"_Id UNIQUE (" + pk + ")\r\n" 
 						+ ");\r\n\r\n" ;
 				
 				/**
