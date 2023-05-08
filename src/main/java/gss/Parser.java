@@ -142,6 +142,9 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				String oriSQL = FileTools.readFileContent(sourceSQLPath);
 				String tdDBTableNameDot = oriSQL.substring(oriSQL.toUpperCase().indexOf("TABLE") + 5,oriSQL.indexOf(",")).trim();
 				String tdDBTableNameUL = tdDBTableNameDot.replace(".", "_");
+//				if(!"DP_PMM_TBPIACBK".equals(tdDBTableNameUL )) {
+//					continue;
+//				}
 				String dwDBTableName = msDBName + ".dbo." + tdDBTableNameUL;
 				String polybaseTableName = "dbo.TD_" + tdDBTableNameUL;
 //				if("DP_PMM.THPMSCR1".equals(tableName))
@@ -153,9 +156,10 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				schema = replaceDoubleSpace(schema.replace("CHARACTER SET UNICODE NOT CASESPECIFIC", ""));
 				schema = replaceDoubleSpace(schema.replace("FORMAT 'YYYY/MM/DD'", ""));
 				
-				// 截取PRIMARY INDEX部份
-				String pk = oriSQL.substring(oriSQL.indexOf("PRIMARY INDEX"));
-				pk = pk.substring(pk.indexOf("(") + 1,pk.indexOf(")")).replace("\r\n", "").trim();
+				// 截取UNIQUE PRIMARY INDEX部份
+				boolean pk = oriSQL.indexOf("UNIQUE PRIMARY INDEX") > 0;
+				String index = oriSQL.substring(oriSQL.indexOf("PRIMARY INDEX"));
+				index = index.substring(index.indexOf("(") + 1,index.indexOf(")")).replace("\r\n", "").trim();
 				
 //				// 2.外部關聯表EXTERNAL TABLE
 //				createExternalTable += "insert into BDBU_POST_HIS.dbo.CreateExternalTable \r\n"
@@ -176,7 +180,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				// 1.將上述的schema解悉為較細項的Table Layout
 				mapList = new ArrayList<Map<String, String>>();
 				String[] colSchemaList = schema.split("\r\n");
-				String[] pkList = pk.split(",");
+				String[] indexList = index.split(",");
 				for(String forColSchema : colSchemaList) {
 
 					map = new HashMap<String, String>();
@@ -196,10 +200,12 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 					
 					// PK
 					String colPK = "";
-					for (String str : pkList) {
-						if(str.trim().equals(colName)) {
-							colPK = "Y" ;
-							break;
+					if (pk) {
+						for (String str : indexList) {
+							if (str.trim().equals(colName)) {
+								colPK = "Y";
+								break;
+							}
 						}
 					}
 					
@@ -248,11 +254,14 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				createExternalTable = createExternalTable.substring(0,createExternalTable.length()-1) + "\r\n)\r\n"
 						+ "WITH (DATA_SOURCE = " + DATA_SOURCE + ", LOCATION = '" + tdDBTableNameDot
 						+ "');\r\n\r\n"	;
-				createMSSQLTable = createMSSQLTable.substring(0,createMSSQLTable.length()) 
-//						+ "\n\tPRIMARY KEY (" + pk + ")\r\n" 
-						+ "\n\tCONSTRAINT u_"+tdDBTableNameUL+"_Id UNIQUE (" + pk + ")\r\n" 
-						+ ");\r\n\r\n" ;
-				
+				createMSSQLTable = createMSSQLTable.substring(0,createMSSQLTable.length() - 1) ;
+//				if(pk) {
+				createMSSQLTable += pk ? ",\n\tCONSTRAINT u_"+tdDBTableNameUL+"_Id UNIQUE (" + index + ")\r\n" : "\r\n" ;
+//				}
+				createMSSQLTable += ");\r\n" ;
+				createMSSQLTable += pk ? "\r\n"
+						: "CREATE INDEX i_" + tdDBTableNameUL + "_index1 ON " + dwDBTableName + " (" + index + ");\r\n\r\n";
+
 				/**
 				 * 與整理過的Table Layout文件比對是否一致
 				 */
