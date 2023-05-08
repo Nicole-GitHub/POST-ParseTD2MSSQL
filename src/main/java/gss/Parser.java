@@ -169,8 +169,9 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				// 2.CREATE MSSQL TABLE
 				createMSSQLTable += "CREATE TABLE " + dwDBTableName + "\r\n(" ;
 				// 2.insert into
-				insertInto += "insert into " + msDBName + ".dbo.InsertInto \r\n"
-						+ "values('insert into " + dwDBTableName + " select * from " + polybaseTableName + ";');\r\n";
+//				insertInto += "insert into " + msDBName + ".dbo.InsertInto \r\n"
+//						+ "values('insert into " + dwDBTableName + " select * from " + polybaseTableName + ";');\r\n";
+				insertInto += "insert into " + dwDBTableName + " select * from " + polybaseTableName + ";\r\n";
 				
 				// 1.將上述的schema解悉為較細項的Table Layout
 				mapList = new ArrayList<Map<String, String>>();
