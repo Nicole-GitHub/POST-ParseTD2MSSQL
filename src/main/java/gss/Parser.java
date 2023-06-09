@@ -37,7 +37,7 @@ public class Parser {
 			path = os.contains("Mac") ? "/Users/nicole/Dropbox/POST/JavaTools/POST-ParseTD2MSSQL/" // Mac
 							: "C:/Users/nicole_tsou/Dropbox/POST/JavaTools/POST-ParseTD2MSSQL/"; // win
 //			targetTableLayoutExcelPath = "C:/Users/nicole_tsou/Dropbox/POST/JavaTools/POST-ParseTD2MSSQL/";
-			svnPath = "C:/22/DW/dw2209/";
+			svnPath = "C:/SVN/dw2209/";
 		}
 		
 		/**
@@ -48,8 +48,10 @@ public class Parser {
 		Scanner s = null;
 		try {
 			s =  isStartupFromJar ? new Scanner(System.in, "big5") : new Scanner(System.in);
-			System.out.println("請輸入您本機放置SVN(dw2209)目錄的路徑(例:C:/22/DW/dw2209/): ");
-			svnPath = "".equals(svnPath) ? s.nextLine() + "/" : svnPath;
+			if("".equals(svnPath)) {
+				System.out.println("請輸入您本機放置SVN(dw2209)目錄的路徑(例:C:/SVN/dw2209/): ");
+				svnPath = s.nextLine() + "/";
+			}
 		}catch(Exception ex) {
 		}finally {
 			if(s != null) s.close();
@@ -370,6 +372,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 							String sqlColNull = mapLayout.get("ColNull").toUpperCase();
 							String sqlColPK = mapLayout.get("ColPK").toUpperCase();
 
+
 							CellStyle sqlColTypeCellStyle = excelColType.equals(sqlColType) ? cellStyleNormal : cellStyleError;
 							CellStyle sqlColLenCellStyle = excelColLen.equals(sqlColLen) ? cellStyleNormal : cellStyleError;
 							CellStyle sqlColNullCellStyle = excelColNull.equals(sqlColNull) ? cellStyleNormal : cellStyleError;
@@ -411,6 +414,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 			// 以SQL內的欄位名稱為主去比對Excel，找出是否SQL有但Excel沒有的欄位
 			lastRowNum++;
 			for(Map<String, String> mapLayout : mapListSQLLayout) {
+
 				excelEqualsSql = false;
 				String sqlColName = mapLayout.get("ColName").toUpperCase();
 				for (int i = 4; i <= sourceSheet.getLastRowNum(); i++) {
@@ -435,7 +439,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 					Tools.setCell(cellStyleError, row, 2, "");
 					Tools.setCell(cellStyleError, row, 3, mapLayout.get("ColType").toUpperCase());
 					Tools.setCell(cellStyleError, row, 4, mapLayout.get("ColLen").toUpperCase());
-					Tools.setCell(cellStyleError, row, 5, mapLayout.get("ColNull").toUpperCase());
+					Tools.setCell(cellStyleError, row, 5, mapLayout.get("ColPK").toUpperCase());
 					Tools.setCell(cellStyleError, row, 6, mapLayout.get("ColNull").toUpperCase());
 //					isError = true;
 				}
