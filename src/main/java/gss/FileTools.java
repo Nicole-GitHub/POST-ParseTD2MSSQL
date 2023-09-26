@@ -120,7 +120,7 @@ public class FileTools {
 //			System.out.println(buffer);
 			return buffer.toString();
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("readFileContent Error:" + e.getMessage());
 		} finally {
 			if (br != null) br.close();
 			if (isr != null) isr.close();

@@ -58,7 +58,7 @@ public class Parser {
 		}
 		
 		// 要移轉的清單Excel與對應的SQL檔
-		String sourceSQLListExcelPath = svnPath + "DOCUMENT/1-REQ/儲壽功能_檔案清單.xlsx";
+		String sourceSQLListExcelPath = svnPath + "DOCUMENT/1-REQ/儲壽功能_檔案清單(ETL新增Table).xlsx";
 		String sourceSQLPath = svnPath + "COLLECTION/郵政整體資訊管理系統/現行郵政整體資訊管理系統SourceCode/TableScript/Schema/";
 		// 要與上述SQL比對的Table Spec
 		String sourceTableLayoutExcelPath = svnPath + "DOCUMENT/3-SD/DW/Table Spec/";
@@ -139,18 +139,14 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 		try {
 			for (Map<String, String> mapTableInfo : sourceTableList) {
 				// 取Teradata SQL Script 內容
-				String sourceSQLPath = mapPath.get("sourceSQLPath")+ mapTableInfo.get("TableName") + ".sql";
-//				System.out.println("sqlFileName:" + sourceSQLPath );
+				String sourceSQLPath = mapPath.get("sourceSQLPath") + mapTableInfo.get("TableName") + ".sql";
 				String oriSQL = FileTools.readFileContent(sourceSQLPath);
+				if(StringUtils.isBlank(oriSQL)) continue;
+				
 				String tdDBTableNameDot = oriSQL.substring(oriSQL.toUpperCase().indexOf("TABLE") + 5,oriSQL.indexOf(",")).trim();
 				String tdDBTableNameUL = tdDBTableNameDot.replace(".", "_");
-//				if(!"DP_PMM_TBPIACBK".equals(tdDBTableNameUL )) {
-//					continue;
-//				}
 				String dwDBTableName = msDBName + ".dbo." + tdDBTableNameUL;
 				String polybaseTableName = "dbo.TD_" + tdDBTableNameUL;
-//				if("DP_PMM.THPMSCR1".equals(tableName))
-//					System.out.println("Stop!");
 				
 				// 截取schema部份
 				String schema = oriSQL.substring(oriSQL.indexOf("("), oriSQL.lastIndexOf(")", oriSQL.indexOf("PRIMARY INDEX"))+1);
@@ -163,20 +159,12 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				String index = oriSQL.substring(oriSQL.indexOf("PRIMARY INDEX"));
 				index = index.substring(index.indexOf("(") + 1,index.indexOf(")")).replace("\r\n", "").trim();
 				
-//				// 2.外部關聯表EXTERNAL TABLE
-//				createExternalTable += "insert into BDBU_POST_HIS.dbo.CreateExternalTable \r\n"
-//						+ "values('CREATE EXTERNAL TABLE " + tableName + "\r\n(" ;
-//				// 2.CREATE MSSQL TABLE
-//				createMSSQLTable += "insert into BDBU_POST_HIS.dbo.CreateMSSQLTable \r\n"
-//						+ "values('CREATE TABLE " + dwTableName + "\r\n(" ;
 
 				// 2.外部關聯表EXTERNAL TABLE
 				createExternalTable += "CREATE EXTERNAL TABLE " + polybaseTableName + "\r\n(" ;
 				// 2.CREATE MSSQL TABLE
 				createMSSQLTable += "CREATE TABLE " + dwDBTableName + "\r\n(" ;
 				// 2.insert into
-//				insertInto += "insert into " + msDBName + ".dbo.InsertInto \r\n"
-//						+ "values('insert into " + dwDBTableName + " select * from " + polybaseTableName + ";');\r\n";
 				insertInto += "insert into " + dwDBTableName + " select * from " + polybaseTableName + ";\r\n";
 				
 				// 1.將上述的schema解悉為較細項的Table Layout
@@ -257,9 +245,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 						+ "WITH (DATA_SOURCE = " + DATA_SOURCE + ", LOCATION = '" + tdDBTableNameDot
 						+ "');\r\n\r\n"	;
 				createMSSQLTable = createMSSQLTable.substring(0,createMSSQLTable.length() - 1) ;
-//				if(pk) {
 				createMSSQLTable += pk ? ",\n\tCONSTRAINT u_"+tdDBTableNameUL+"_Id UNIQUE (" + index + ")\r\n" : "\r\n" ;
-//				}
 				createMSSQLTable += ");\r\n" ;
 				createMSSQLTable += pk ? "\r\n"
 						: "CREATE INDEX i_" + tdDBTableNameUL + "_index1 ON " + dwDBTableName + " (" + index + ");\r\n\r\n";
@@ -299,18 +285,21 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 
 		String sourceTableLayoutExcelPath = mapPath.get("sourceTableLayoutExcelPath");
 		String targetTableLayoutExcelPath = mapPath.get("targetTableLayoutExcelPath");
-//		boolean isError = false;
 		
 		try {
 			// 找出此檔案放置的確切位置
 			String[] folderNameList = new File(sourceTableLayoutExcelPath).list();
 			String folderName = "";
 			for (String str : folderNameList) {
-				if (str.substring(0, str.indexOf("-")).trim().equals(subSys)) {
+				if (str.indexOf("-") > 0 && str.substring(0, str.indexOf("-")).trim().equals(subSys)) {
 					folderName = str;
 					break;
 				}
 			}
+			
+			// 當查無子系統別的目錄時則直接return
+			if(StringUtils.isBlank(folderName)) return;
+			
 			sourceTableLayoutExcelPath += folderName + "/";
 
 			String[] fileNameList = new File(sourceTableLayoutExcelPath).list();
@@ -328,10 +317,6 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 				return;
 			}
 			sourceTableLayoutExcelPath += fileName;
-//			System.out.println("targetTableLayoutExcelPath: "+sourceTableLayoutExcelPath);
-			
-//			if("C:/22/DW/dw2209/DOCUMENT/3-SD/DW/Table Spec/PMM-責任績效管理/THPMSCR1-績效評分成績檔(預算累計至本月)歷史檔.xlsx".equals(sourceTableLayoutExcelPath))
-//				System.out.println("Stop!");
 			Sheet sourceSheet = Tools.getSheet(sourceTableLayoutExcelPath, "Layout");
 			
 			/**
@@ -378,11 +363,6 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 							CellStyle sqlColNullCellStyle = excelColNull.equals(sqlColNull) ? cellStyleNormal : cellStyleError;
 							CellStyle sqlColPKCellStyle = excelColPK.equals(sqlColPK) ? cellStyleNormal	: cellStyleError;
 							
-//							isError = (sqlColTypeCellStyle.equals(cellStyleError)
-//									|| sqlColLenCellStyle.equals(cellStyleError)
-//									|| sqlColNullCellStyle.equals(cellStyleError)
-//									|| sqlColPKCellStyle.equals(cellStyleError)) ? true : false;
-							
 							cell = row.createCell(0);
 							cell.setCellFormula("ROW()-4");
 							cell.setCellStyle(cellStyleNormal);
@@ -405,7 +385,6 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 						Tools.setCell(cellStyleError, row, 4, "");
 						Tools.setCell(cellStyleError, row, 5, "");
 						Tools.setCell(cellStyleError, row, 6, "");
-//						isError = true;
 					}
 					lastRowNum = i;
 				}
@@ -441,7 +420,6 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 					Tools.setCell(cellStyleError, row, 4, mapLayout.get("ColLen").toUpperCase());
 					Tools.setCell(cellStyleError, row, 5, mapLayout.get("ColPK").toUpperCase());
 					Tools.setCell(cellStyleError, row, 6, mapLayout.get("ColNull").toUpperCase());
-//					isError = true;
 				}
 			}
 			
