@@ -186,7 +186,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 					String colLen = colTypeLen.contains("(") 
 							? colTypeLen.substring(colTypeLen.indexOf("(") + 1, colTypeLen.indexOf(")")).trim().replace(" ", "")
 							: "";
-					String colNull = forColSchema.contains("NOT NULL") ? "" : "Y";
+					String colNull = forColSchema.contains("NOT NULL") ? "N" : "";
 					
 					// PK
 					String colPK = "";
@@ -235,7 +235,7 @@ System.out.println("runParserSourceSQLListExcel 檔案清單分析 Done! ");
 
 					// 組sql用
 					colLen = StringUtils.isBlank(colLen) ? "" : "(" + colLen + ")";
-					colNull = "Y".equals(colNull) ? "" : "NOT NULL";
+					colNull = "N".equals(colNull) ? "NOT NULL" : "";
 					String colSchema = "\n\t" + colName + " " + colType + colLen + " " + colNull + " ,";
 					createExternalTable += colSchema;
 					createMSSQLTable += colSchema;
