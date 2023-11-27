@@ -58,7 +58,7 @@ public class Parser {
 		}
 		
 		// 要移轉的清單Excel與對應的SQL檔
-		String sourceSQLListExcelPath = svnPath + "DOCUMENT/1-REQ/儲壽功能_檔案清單(ETL新增Table).xlsx";
+		String sourceSQLListExcelPath = svnPath + "DOCUMENT/1-REQ/儲壽功能_檔案清單2.xlsx";
 		String sourceSQLPath = svnPath + "COLLECTION/郵政整體資訊管理系統/現行郵政整體資訊管理系統SourceCode/TableScript/Schema/";
 		// 要與上述SQL比對的Table Spec
 		String sourceTableLayoutExcelPath = svnPath + "DOCUMENT/3-SD/DW/Table Spec/";
