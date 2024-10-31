@@ -58,7 +58,8 @@ public class Parser {
 		}
 		
 		// 要移轉的清單Excel與對應的SQL檔
-		String sourceSQLListExcelPath = svnPath + "DOCUMENT/1-REQ/儲壽功能_檔案清單2.xlsx";
+//		String sourceSQLListExcelPath = svnPath + "DOCUMENT/1-REQ/儲壽功能_檔案清單2.xlsx";
+		String sourceSQLListExcelPath = "C:\\Users\\nicole_tsou\\Dropbox\\POST\\Polybase\\Phase3\\_驗證結果.xlsx";
 		String sourceSQLPath = svnPath + "COLLECTION/郵政整體資訊管理系統/現行郵政整體資訊管理系統SourceCode/TableScript/Schema/";
 		// 要與上述SQL比對的Table Spec
 		String sourceTableLayoutExcelPath = svnPath + "DOCUMENT/3-SD/DW/Table Spec/";
@@ -105,7 +106,7 @@ public class Parser {
 				if (cell != null && "TABLE".equals(cell.toString().toUpperCase().trim())) {
 					map = new HashMap<String, String>();
 					map.put("TableName", row.getCell(4).toString());
-					map.put("SubSys", row.getCell(11).toString());
+					map.put("SubSys", row.getCell(6).toString());
 					mapList.add(map);
 					spaceRow = 0;
 				} else if (cell == null || StringUtils.isBlank(cell.toString())) {
